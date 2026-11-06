@@ -32,9 +32,10 @@
       return false;
     }
 
-    if (equipos.some(equipo => equipo.nombre.toLowerCase() === nombre.trim().toLowerCase)) {
-      return false;
-    }
+     if (equipos.some(equipo => equipo.nombre.toLowerCase() === nombre.trim().toLowerCase())) {
+    return false;
+  }
+ 
     
     equipos.push({
       id: Date.now(), nombre: nombre.trim()
@@ -55,7 +56,7 @@
     function generarEnfrentamientos() {
     partidos.length = 0;
     
-    if (equipo.length < 2) {
+    if (equipos.length < 2) {
       return;
     }
 
@@ -65,7 +66,7 @@
           let e2 = equipos[j];
 
         partidos.push({
-          id: partidos.lenght + 1,
+          id: partidos.length + 1,
           equipo1Id: e1.id,
           equipo2Id: e2.id,
           goles1: null,
@@ -77,16 +78,13 @@
     }
 }
 
-console.log(agregarEquipo("Polixe"));
-console.log(agregarEquipo("Culiblanco"));
-console.log(agregarEquipo("Algonales"));
-console.log(agregarEquipo("Prado del gey"));
 
 
-console.log(agregarEquipo("Poblaore")); //Este nos va a dar falso porque ya hay un equipo de poblaores
+
+ //Este nos va a dar falso porque ya hay un equipo de poblaores
 console.log(agregarEquipo("  ")); //Y aqui igual porque esta vacio
 
-generarEnfrentamientos();
+
 
 console.log(equipos);
 console.log(partidos);
@@ -186,13 +184,12 @@ console.log(partidos);
     });
 
 // 4. Ordenar el array resultante por puntos (y secundariamente por GF - GC).
-tabla.sort((a, b) => (b.puntos - a.puntos) || ( a.puntos - b.puntos ));
-
+tabla.sort((a, b) => (b.puntos - a.puntos) || ((b.gf - b.gc) - (a.gf - a.gc)));
 // Terminar 
 
 // 5. Retornar la lista calculada.
 
-  return [];
+  return tabla  ;
 }
 
 
@@ -208,6 +205,16 @@ tabla.sort((a, b) => (b.puntos - a.puntos) || ( a.puntos - b.puntos ));
   // 1. Obtener el elemento HTML #listaEquipos.
   // 2. Limpiar su contenido.
   // 3. Recorrer 'equipos' y renderizar un <li> por cada equipo.
+  const lista = document.getElementById("listaEquipos");
+  lista.innerHTML = "";
+
+  equipos.forEach(equipo => {
+    const li = document.createElement("li");
+    li.textContent = equipo.nombre;
+    lista.appendChild(li);
+  });
+
+    
 }
 
   /**
@@ -218,6 +225,29 @@ tabla.sort((a, b) => (b.puntos - a.puntos) || ( a.puntos - b.puntos ));
   // 1. Obtener el contenedor #contenedorPartidos.
   // 2. Limpiar su contenido.
   // 3. Recorrer 'partidos' generando controles para ingresar resultado y guardar.
+
+  const contenedor = document.getElementById("contenedorPartidos");
+  contenedor.innerHTML = "";
+
+  partidos.forEach(p => {
+    const e1 = equipos.find(e => e.id === p.equipo1Id);
+    const e2 = equipos.find(e => e.id === p.equipo2Id);
+
+    const idInput1 = `goles1-${p.id}`;
+    const idInput2 = `goles2-${p.id}`;
+
+   const div = document.createElement("div");
+div.style.cssText = "display:flex; align-items:center; gap:8px; margin-bottom:8px;";
+div.innerHTML = `
+  <span>${e1.nombre}</span>
+  <input type="number" min="0" id="${idInput1}" style="width:60px" value="${p.jugado ? p.goles1 : ""}">
+  <span>-</span>
+  <input type="number" min="0" id="${idInput2}" style="width:60px" value="${p.jugado ? p.goles2 : ""}">
+  <span>${e2.nombre}</span>
+  <button onclick="handlerGuardarResultado(${p.id}, '${idInput1}', '${idInput2}')">Guardar</button>
+`;
+    contenedor.appendChild(div);
+  });
 }
 
   /**
@@ -227,6 +257,26 @@ tabla.sort((a, b) => (b.puntos - a.puntos) || ( a.puntos - b.puntos ));
     // TODO (Alumno 3):
     // 1. Llamar a calcularTablaPosiciones() (Función del Alumno 2).
     // 2. Obtener #tablaClasificacion y construir los <tr> y <td> con los datos.
+
+      const tabla = calcularTablaPosiciones();
+  const cuerpo = document.getElementById("tablaClasificacion");
+  cuerpo.innerHTML = "";
+
+  tabla.forEach((t, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${t.nombre}</td>
+      <td>${t.pj}</td>
+      <td>${t.pg}</td>
+      <td>${t.pe}</td>
+      <td>${t.pp}</td>
+      <td>${t.gf}</td>
+      <td>${t.gc}</td>
+      <td>${t.puntos}</td>
+    `;
+    cuerpo.appendChild(tr);
+  });
   }
 
 
@@ -238,23 +288,57 @@ tabla.sort((a, b) => (b.puntos - a.puntos) || ( a.puntos - b.puntos ));
   * Calcula el total de goles anotados y busca el equipo con más goles a favor.
   * @returns {Object} { totalGoles: number, maxGoleador: string }
   */
-  function obtenerEstadisticas() {
-    // TODO (Alumno 4):
-    // 1. Recorrer 'partidos' para sumar los goles totales del torneo.
-    // 2. Usar la tabla de posiciones de Alumno 2 para buscar el equipo con mayor GF (Goles a Favor).
-    // 3. Retornar el objeto con los datos.
-    return { totalGoles: 0, maxGoleador: "-" };
-  }
+function obtenerEstadisticas() {
+
+    let totalGoles = 0;
+
+    // Sumar los goles de los partidos jugados.
+    partidos.forEach(p => {
+        if (p.jugado) {
+            totalGoles += p.goles1 + p.goles2;
+        }
+    });
+
+    // Obtener la clasificación.
+    const tabla = calcularTablaPosiciones();
+
+    let maxGoleador = "-";
+
+    // Buscar el equipo con más goles a favor.
+    if (tabla.length > 0) {
+        const equipoMaxGoles = tabla.reduce((max, equipo) => {
+            return equipo.gf > max.gf ? equipo : max;
+        });
+
+        if (equipoMaxGoles.gf > 0) {
+            maxGoleador = equipoMaxGoles.nombre;
+        }
+    }
+
+    return {
+        totalGoles: totalGoles,
+        maxGoleador: maxGoleador
+    };
+}
 
   /**
   * Limpia las variables globales y refresca toda la interfaz a su estado inicial.
   */
-  function reiniciarTorneo() {
-    // TODO (Alumno 4):
-    // 1. Vaciar arrays: equipos = []; partidos = [];
-    // 2. Volver a pintar todas las secciones (usando funciones de Alumno 3).
-    // 3. Actualizar panel de estadísticas a 0.
-  }
+function reiniciarTorneo() {
+
+    // Vaciar los arrays.
+    equipos.length = 0;
+    partidos.length = 0;
+
+    // Actualizar la interfaz.
+    pintarListaEquipos();
+    pintarPartidos();
+    pintarTablaClasificacion();
+
+    // Reiniciar las estadísticas.
+    document.getElementById("txtTotalGoles").innerText = 0;
+    document.getElementById("txtMaxGoleador").innerText = "-";
+}
 
 
   // ==========================================
@@ -276,18 +360,25 @@ tabla.sort((a, b) => (b.puntos - a.puntos) || ( a.puntos - b.puntos ));
     pintarTablaClasificacion();
   }
 
-  function handlerGuardarResultado(partidoId, inputId1, inputId2) {
+ function handlerGuardarResultado(partidoId, inputId1, inputId2) {
     const g1 = parseInt(document.getElementById(inputId1).value);
     const g2 = parseInt(document.getElementById(inputId2).value);
 
-    registrarResultado(partidoId, g1, g2);
-    pintarTablaClasificacion();
+    if (registrarResultado(partidoId, g1, g2)) {
 
-    // Actualizar estadísticas (Alumno 4)
-    const stats = obtenerEstadisticas();
-    document.getElementById("txtTotalGoles").innerText = stats.totalGoles;
-    document.getElementById("txtMaxGoleador").innerText = stats.maxGoleador;
-  }
+        pintarTablaClasificacion();
+        pintarPartidos();
+
+        // Actualizar estadísticas.
+        const stats = obtenerEstadisticas();
+
+        document.getElementById("txtTotalGoles").innerText = stats.totalGoles;
+        document.getElementById("txtMaxGoleador").innerText = stats.maxGoleador;
+
+    } else {
+        alert("Resultado inválido. Introduce goles enteros iguales o mayores que 0.");
+    }
+}
 
   function handlerReiniciarTorneo() {
     if (confirm("¿Seguro que deseas reiniciar todo el torneo?")) {
